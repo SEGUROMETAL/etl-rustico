@@ -1,0 +1,20 @@
+services:
+  clickhouse-server:
+    container_name: ch_reportes
+    image: clickhouse/clickhouse-server:latest
+    restart: unless-stopped
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      - CLICKHOUSE_DB=reportes
+      - CLICKHOUSE_USER=lcabral
+      - CLICKHOUSE_PASSWORD=Lcabral6*
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+volumes:
+  clickhouse-data:

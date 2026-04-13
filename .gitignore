@@ -1,0 +1,21 @@
+# Python-generated files
+__pycache__/
+*.py[ocd]
+build/
+dist/
+wheels/
+*.egg-info
+*.env
+*.xls*
+*.csv
+*.sqlite
+*.db
+files/par/
+.vscode
+.ruff_cache/
+*ipynb
+*cortes*
+
+# Virtual environments
+.venv/
+*.parquet
