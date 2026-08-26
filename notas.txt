@@ -1,6 +1,0 @@
-Asegurados
-    - Hay bloqueados sin grupo
-    Unificar asegurados
-        Ya hay grupos de asegurados que fueron revisados manualemnte
-        A esos grupos se les adjudica un nro de persona de la lista pero para esa persona no existe el dato (adjudicar)
-        

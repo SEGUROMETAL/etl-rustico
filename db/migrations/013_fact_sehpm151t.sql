@@ -1,0 +1,46 @@
+-- Reconstruido desde el schema de Polars del ETL.
+-- Verificar contra producción: SHOW CREATE TABLE sehpm151t
+CREATE TABLE IF NOT EXISTS sehpm151t (
+    FEmision Date,
+    FVigDesde Date,
+    FVigHasta Date,
+    Op UInt32,
+    Suplemento UInt32,
+    CodTipoOp UInt32,
+    CodSubTipoOp UInt32,
+    PlVidaNvaRen UInt32,
+    CodRama UInt32,
+    Poliza UInt32,
+    NroAsegurado UInt32,
+    CpAsegurado UInt32,
+    CpSufijoAsegurado UInt32,
+    NombreAsegurado String,
+    LocalidadAsegurado String,
+    ProvinciaAsegurado String,
+    CodOrganizador UInt32,
+    CodProductor UInt32,
+    SumaAsegurada Float64,
+    PrimaNeta Float64,
+    RecFin Float64,
+    RecAdm Float64,
+    DerEmision Float64,
+    SellRiesgo Float64,
+    ImpInt Float64,
+    ServSoc Float64,
+    TasaSsn Float64,
+    Iva Float64,
+    IvaPercepcion Float64,
+    IvaRespNoInscr Float64,
+    BonifPrima Float64,
+    Acc Float64,
+    RecCapital Float64,
+    PrimaTarifa Float64,
+    PremioBruto Float64,
+    CodOrganizadorComision UInt32,
+    ComOrganizador Float64,
+    CodProductorComision UInt32,
+    ComProductor Float64
+)
+ENGINE = MergeTree
+PARTITION BY toYYYYMM(FEmision)
+ORDER BY (Op, Suplemento);
