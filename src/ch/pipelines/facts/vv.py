@@ -36,6 +36,7 @@ def filtrar_existentes_del_dia(ch, data: pl.DataFrame, fecha: date) -> pl.DataFr
         return data
     return data.join(existentes, how="anti", on=KEYS_VV)
 
+
 COLUMNAS = [
     "CodOrganizador",
     "CodProductor",
@@ -95,14 +96,11 @@ def _extraer_dia(cn, engine, fecha: date) -> pl.DataFrame | None:
     ).fetchone()
     if existe is None:
         return None
-    return (
-        pl.read_database(
-            "SELECT * FROM vigentes_vehiculos_dia WHERE Fecha = :fecha",
-            connection=engine,
-            execute_options={"parameters": {"fecha": fecha}},
-        )
-        .select(COLUMNAS)
-    )
+    return pl.read_database(
+        "SELECT * FROM vigentes_vehiculos_dia WHERE Fecha = :fecha",
+        connection=engine,
+        execute_options={"parameters": {"fecha": fecha}},
+    ).select(COLUMNAS)
 
 
 @register(
@@ -110,9 +108,19 @@ def _extraer_dia(cn, engine, fecha: date) -> pl.DataFrame | None:
     "hechos",
     "Snapshot diario de vehículos vigentes, incremental por día",
 )
-def run(desde: str | None = None) -> None:
+def run(
+    desde: str | None = None,
+    hasta: str | None = None,
+    anio: int | None = None,
+) -> None:
     engine = mysql_engine()
-    inicio = date.fromisoformat(desde) if desde else INICIO_HISTORICO
+    if desde is not None:
+        inicio = date.fromisoformat(desde)
+    elif anio is not None:
+        inicio = date(anio, 1, 1)
+    else:
+        inicio = INICIO_HISTORICO
+    fin = date.fromisoformat(hasta) if hasta else date.today()
 
     with engine.connect() as cn, ch_client() as ch:
         fechas_existentes: set[date] = fechas_ya_cargadas(ch)
@@ -120,7 +128,7 @@ def run(desde: str | None = None) -> None:
 
         fecha = inicio
         cargados: list[date] = []
-        while fecha < date.today():
+        while fecha < fin:
             fecha += timedelta(1)
             if fecha in fechas_existentes:
                 continue
@@ -147,9 +155,7 @@ def run(desde: str | None = None) -> None:
             )
 
         if cargados:
-            optimize_partitions(
-                ch, TABLA, "Fecha", pl.DataFrame({"Fecha": cargados})
-            )
+            optimize_partitions(ch, TABLA, "Fecha", pl.DataFrame({"Fecha": cargados}))
 
         resumen = ch.query(
             "SELECT Mes, Minimo, Maximo, Promedio, Gap, Std "
@@ -157,7 +163,10 @@ def run(desde: str | None = None) -> None:
             column_oriented=True,
         )
         df_res = pl.from_dict(
-            {k: v for k, v in zip(resumen.column_names, resumen.result_set, strict=False)},
+            {
+                k: v
+                for k, v in zip(resumen.column_names, resumen.result_set, strict=False)
+            },
             strict=False,
         )
         logger.info("Resumen mensual vv:\n%s", df_res)

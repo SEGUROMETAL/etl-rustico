@@ -10,7 +10,9 @@ from ch.log import logger
 from ch.months import ym
 
 
-def df_from_ch(ch: ChClient, query: str, parameters: dict | None = None) -> pl.DataFrame:
+def df_from_ch(
+    ch: ChClient, query: str, parameters: dict | None = None
+) -> pl.DataFrame:
     res = ch.query(query, parameters=parameters, column_oriented=True)
     return pl.from_dict(
         data={k: v for k, v in zip(res.column_names, res.result_set, strict=False)},
@@ -48,7 +50,7 @@ def load_incremental(
     if df.is_empty():
         return 0
     total = 0
-    for (a, m) in sorted(
+    for a, m in sorted(
         set(zip(df[date_col].dt.year(), df[date_col].dt.month(), strict=True))
     ):
         chunk = df.filter(
@@ -67,15 +69,21 @@ def load_incremental(
     return total
 
 
-def optimize_partitions(ch: ChClient, table: str, date_col: str, df: pl.DataFrame) -> None:
-    meses = sorted(set(zip(df[date_col].dt.year(), df[date_col].dt.month(), strict=True)))
+def optimize_partitions(
+    ch: ChClient, table: str, date_col: str, df: pl.DataFrame
+) -> None:
+    meses = sorted(
+        set(zip(df[date_col].dt.year(), df[date_col].dt.month(), strict=True))
+    )
     for a, m in meses:
         ch.command(f"OPTIMIZE TABLE {table} PARTITION {ym(a, m)}")
 
 
 def apply_migrations(migrations_dir: Path | None = None) -> list[str]:
     """Aplica todos los .sql de db/migrations en orden alfabético. Idempotente."""
-    migrations_dir = migrations_dir or Path(__file__).resolve().parents[3] / "db" / "migrations"
+    migrations_dir = (
+        migrations_dir or Path(__file__).resolve().parents[3] / "db" / "migrations"
+    )
     applied: list[str] = []
     with ch_client() as ch:
         for sql_file in sorted(migrations_dir.glob("*.sql")):

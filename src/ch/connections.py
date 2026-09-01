@@ -11,7 +11,7 @@ _mysql_engine: Engine | None = None
 
 def mysql_engine() -> Engine:
     global _mysql_engine
-    if _mysql_engine is None or _mysql_engine.disposed:
+    if _mysql_engine is None:
         _mysql_engine = create_engine(
             f"mysql+pymysql://{settings.mysql_user}:{settings.mysql_password}"
             f"@{settings.mysql_host}:{settings.mysql_port}/{settings.mysql_db}",

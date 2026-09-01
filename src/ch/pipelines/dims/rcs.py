@@ -37,9 +37,7 @@ def run() -> None:
         if existing.is_empty():
             to_load = data
         else:
-            joined = data.join(
-                existing, how="left", on=["NumTarifa", "Cap", "Var"], suffix="_ch"
-            )
+            joined = data.join(existing, how="left", on=["NumTarifa", "Cap", "Var"], suffix="_ch")
             es_nueva = pl.col("NumTarifa_ch").is_null()
             cambiada = (
                 (pl.col("RcSl") != pl.col("RcSl_ch"))

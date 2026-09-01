@@ -5,7 +5,7 @@ import polars as pl
 from ch.connections import ch_client
 from ch.loading import load_incremental
 from ch.log import logger
-from ch.months import iter_months
+from ch.months import iter_months, resolve_fin, resolve_inicio
 from ch.paths import PRIMAS_VIDA_CSV
 from ch.registry import register
 
@@ -50,7 +50,12 @@ COLUMNAS_CSV = {
     "hechos",
     "Primas de vida desde CSV mainframe (R94959699OpEmVIDA.csv)",
 )
-def run() -> None:
+def run(
+    anio: int | None = None,
+    desde: str | None = None,
+    hasta: str | None = None,
+) -> None:
+    _hasta = resolve_fin(hasta)
     renamecols = {k: v[0] for k, v in COLUMNAS_CSV.items()}
     schema = {k: v[1] for k, v in COLUMNAS_CSV.items()}
     data = (
@@ -64,12 +69,12 @@ def run() -> None:
         .select([pl.col(k).alias(v) for k, v in renamecols.items()])
         .with_columns(
             [
-                (
-                    pl.col("PrimaTarifaSuplemento") * (100 - pl.col("PctBonPrima"))
-                ).alias("PrimaNetaSuplemento"),
-                (
-                    pl.col("PrimaTarifaCobertura") * (100 - pl.col("PctBonPrima"))
-                ).alias("PrimaNetaCobertura"),
+                (pl.col("PrimaTarifaSuplemento") * (100 - pl.col("PctBonPrima"))).alias(
+                    "PrimaNetaSuplemento"
+                ),
+                (pl.col("PrimaTarifaCobertura") * (100 - pl.col("PctBonPrima"))).alias(
+                    "PrimaNetaCobertura"
+                ),
             ]
         )
     )
@@ -78,8 +83,12 @@ def run() -> None:
         return
 
     min_fecha: date = data["FEmision"].min()
+    if desde is not None or anio is not None:
+        filtro_inicio = resolve_inicio(desde, anio, default_year=min_fecha.year)
+        if filtro_inicio > min_fecha:
+            min_fecha = filtro_inicio
     with ch_client() as ch:
-        for a, m in iter_months(min_fecha):
+        for a, m in iter_months(min_fecha, _hasta):
             chunk = data.filter(
                 (pl.col("FEmision").dt.year() == a) & (pl.col("FEmision").dt.month() == m)
             )

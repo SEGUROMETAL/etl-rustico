@@ -5,7 +5,7 @@ import polars as pl
 from ch.connections import ch_client, mysql_engine
 from ch.loading import df_from_ch, load_incremental
 from ch.log import logger
-from ch.months import iter_months
+from ch.months import iter_months, resolve_fin
 from ch.registry import register
 
 OVERRIDES = {
@@ -128,14 +128,18 @@ CONTROL_QUERY = """SELECT
     (SELECT count(DISTINCT toYYYYMM(FechaPagoMes)) FROM sinpagt_agg) as distintos_sinpagt_agg"""
 
 
-@register(
-    "fact-sinpag", "hechos", "Órdenes de pago de siniestros (SINPAGT), incremental mensual"
-)
-def run(desde: str | None = None) -> None:
+@register("fact-sinpag", "hechos", "Órdenes de pago de siniestros (SINPAGT), incremental mensual")
+def run(
+    desde: str | None = None,
+    hasta: str | None = None,
+    anio: int | None = None,
+) -> None:
     engine = mysql_engine()
     keys = ["CodRama", "Siniestro", "NroLiquidacion", "CodItemPago"]
-    if desde:
+    if desde is not None:
         inicio = date.fromisoformat(desde)
+    elif anio is not None:
+        inicio = date(anio, 1, 1)
     else:
         from sqlalchemy import text
 
@@ -145,9 +149,10 @@ def run(desde: str | None = None) -> None:
             logger.error("No se pudo determinar el mes mínimo de SINPAGT")
             return
         inicio = fpago[0]
+    fin = resolve_fin(hasta)
 
     with ch_client() as ch:
-        for a, m in iter_months(inicio):
+        for a, m in iter_months(inicio, fin):
             data = pl.read_database(
                 QUERY.format(a=a, m=m),
                 connection=engine,

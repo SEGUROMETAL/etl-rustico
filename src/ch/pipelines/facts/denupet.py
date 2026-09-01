@@ -1,11 +1,10 @@
-from datetime import date
 
 import polars as pl
 
 from ch.connections import ch_client, mysql_engine
 from ch.loading import load_incremental
 from ch.log import logger
-from ch.months import iter_months
+from ch.months import iter_months, resolve_fin, resolve_inicio
 from ch.registry import register
 
 OVERRIDES = {
@@ -47,11 +46,17 @@ QUERY = """SELECT
 
 
 @register("fact-denupet", "hechos", "Denuncias de siniestros (DenuPe), incremental mensual")
-def run(anio: int = 2025) -> None:
+def run(
+    anio: int | None = None,
+    desde: str | None = None,
+    hasta: str | None = None,
+) -> None:
     engine = mysql_engine()
     keys = ["Op", "Siniestro", "Comp"]
+    inicio = resolve_inicio(desde, anio, default_year=2025)
+    fin = resolve_fin(hasta)
     with ch_client() as ch:
-        for a, m in iter_months(date(anio, 1, 1)):
+        for a, m in iter_months(inicio, fin):
             data = pl.read_database(
                 QUERY.format(a=a, m=m),
                 connection=engine,

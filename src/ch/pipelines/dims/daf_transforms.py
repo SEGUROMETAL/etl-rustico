@@ -26,9 +26,7 @@ def dni_invalido() -> pl.Expr:
 def _digitos_todos_iguales(col: str, desde: int, cast_string: bool = False) -> pl.Expr:
     """True si todos los dígitos desde `desde` son iguales entre sí."""
     expr = pl.col(col).cast(pl.String) if cast_string else pl.col(col)
-    return (
-        expr.str.slice(desde).str.extract_all(".").list.n_unique() <= 1
-    )
+    return expr.str.slice(desde).str.extract_all(".").list.n_unique() <= 1
 
 
 def normalizar_daf(daf: pl.DataFrame) -> pl.DataFrame:
@@ -81,9 +79,7 @@ def resolver_cadena_grupos(daf: pl.DataFrame, max_iter: int = 20) -> pl.DataFram
         if pendientes.is_empty():
             break
         daf = daf.with_columns(
-            pl.when(
-                pl.col("NroPersona").is_in(pendientes["NroPersona"].to_list())
-            )
+            pl.when(pl.col("NroPersona").is_in(pendientes["NroPersona"].to_list()))
             .then(pl.col("NroPersona"))
             .otherwise(pl.col("Grupo"))
             .alias("Grupo")
@@ -112,11 +108,7 @@ def agrupar_por_documento(daf: pl.DataFrame) -> pl.DataFrame:
     x_max_nro_persona_x_cuit = pl.col("NroPersona").max().over("Cuit")
 
     daf = daf.with_columns(
-        pl.when(
-            (~x_cuit_malo)
-            & (x_personas_x_cuit > 1)
-            & (x_cant_grupos_x_cuit > 1)
-        )
+        pl.when((~x_cuit_malo) & (x_personas_x_cuit > 1) & (x_cant_grupos_x_cuit > 1))
         .then(x_max_grupo_x_cuit)
         .when((~x_cuit_malo) & (x_personas_x_cuit > 1) & (x_max_grupo_x_cuit == 0))
         .then(x_max_nro_persona_x_cuit)
@@ -130,9 +122,7 @@ def agrupar_por_documento(daf: pl.DataFrame) -> pl.DataFrame:
     x_max_nro_persona_x_dni = pl.col("NroPersona").max().over(["NroDocumento", "Sexo"])
 
     daf = daf.with_columns(
-        pl.when(
-            (~x_dni_malo) & (x_personas_x_dni > 1) & (x_cant_grupos_x_dni > 1)
-        )
+        pl.when((~x_dni_malo) & (x_personas_x_dni > 1) & (x_cant_grupos_x_dni > 1))
         .then(x_max_grupo_x_dni)
         .when((~x_dni_malo) & (x_personas_x_dni > 1) & (x_max_grupo_x_dni == 0))
         .then(x_max_nro_persona_x_dni)
@@ -155,9 +145,7 @@ def preparar_salida(
         .with_columns(x_es_grupo.alias("EsDelegado").cast(pl.UInt16))
         .with_columns(
             [
-                (pl.lit(batch_version) + pl.col("row_id").cast(pl.UInt64)).alias(
-                    "version"
-                ),
+                (pl.lit(batch_version) + pl.col("row_id").cast(pl.UInt64)).alias("version"),
                 pl.lit(now or datetime.datetime.now()).alias("last_update"),
             ]
         )

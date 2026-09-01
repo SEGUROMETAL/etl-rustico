@@ -18,9 +18,7 @@ def register(name: str, group: str, description: str = "") -> Callable:
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         if name in _REGISTRY:
             raise ValueError(f"Pipeline duplicado: {name}")
-        _REGISTRY[name] = PipelineInfo(
-            name=name, group=group, description=description, func=func
-        )
+        _REGISTRY[name] = PipelineInfo(name=name, group=group, description=description, func=func)
         return func
 
     return decorator

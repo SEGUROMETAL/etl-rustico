@@ -46,15 +46,11 @@ def _informes_calidad(daf: pl.DataFrame) -> None:
         pl.col("NroPersona").n_unique().over("Grupo").alias("PersonasEnElGrupo")
     ).filter(pl.col("NroPersona").is_in(daf["Grupo"].to_list())).filter(
         pl.col("Bloqueado") == "S"
-    ).join(
-        daf.select(["Grupo", "NroPersona"]), how="inner", on="Grupo", suffix="_p"
-    ).group_by(pl.exclude("NroPersona_p")).agg(
-        pl.col("NroPersona_p").unique().implode().alias("Personas_del_grupo")
-    ).sort(
+    ).join(daf.select(["Grupo", "NroPersona"]), how="inner", on="Grupo", suffix="_p").group_by(
+        pl.exclude("NroPersona_p")
+    ).agg(pl.col("NroPersona_p").unique().implode().alias("Personas_del_grupo")).sort(
         "PersonasEnElGrupo", descending=True
-    ).write_excel(
-        DAF_FILES / "Personas_que_son_grupo_y_estan_bloqueadas.xlsx"
-    )
+    ).write_excel(DAF_FILES / "Personas_que_son_grupo_y_estan_bloqueadas.xlsx")
 
     (
         daf.filter(~(cuit_invalido() & dni_invalido()))

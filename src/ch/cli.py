@@ -1,4 +1,5 @@
 import argparse
+import inspect
 import sys
 
 from rich.console import Console
@@ -24,8 +25,9 @@ def main(argv: list[str] | None = None) -> int:
 
     p_run = sub.add_parser("run", help="Ejecuta un pipeline")
     p_run.add_argument("name", help="Nombre del pipeline")
-    p_run.add_argument("--anio", type=int, default=None)
-    p_run.add_argument("--desde", type=str, default=None, help="Fecha AAAA-MM-DD")
+    p_run.add_argument("--anio", type=int, default=None, help="Año inicial (ej. 2024)")
+    p_run.add_argument("--desde", type=str, default=None, help="Fecha inicial AAAA-MM-DD")
+    p_run.add_argument("--hasta", type=str, default=None, help="Fecha final AAAA-MM-DD (opcional)")
     p_run.add_argument(
         "--arg",
         action="append",
@@ -54,22 +56,37 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "run":
-        kwargs: dict = {}
+        raw_kwargs: dict = {}
         if args.anio is not None:
-            kwargs["anio"] = args.anio
+            raw_kwargs["anio"] = args.anio
         if args.desde is not None:
-            kwargs["desde"] = args.desde
+            raw_kwargs["desde"] = args.desde
+        if args.hasta is not None:
+            raw_kwargs["hasta"] = args.hasta
         for par in args.arg:
             clave, _, valor = par.partition("=")
             if not clave:
                 console.print(f"[red]--arg inválido: {par!r} (usar CLAVE=VALOR)[/red]")
                 return 1
-            kwargs[clave] = valor
+            raw_kwargs[clave] = valor
         try:
             info = get_pipeline(args.name)
         except KeyError as e:
             console.print(f"[red]{e.args[0]}[/red]")
             return 1
+        sig = inspect.signature(info.func)
+        has_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
+        if has_var_kw:
+            kwargs = raw_kwargs
+        else:
+            kwargs = {k: v for k, v in raw_kwargs.items() if k in sig.parameters}
+            ignorados = sorted(set(raw_kwargs) - set(kwargs))
+            if ignorados:
+                logger.warning(
+                    "Argumentos ignorados para '%s': %s",
+                    info.name,
+                    ", ".join(ignorados),
+                )
         logger.info("Ejecutando pipeline '%s' (%s)...", info.name, info.group)
         info.func(**kwargs)
         console.print(f"[bold green]LISTO:[/bold green] {info.name}")
