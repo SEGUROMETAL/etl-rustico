@@ -20,11 +20,40 @@ def df_from_ch(
     )
 
 
+def _table_columns(ch: ChClient, table: str) -> list[str] | None:
+    try:
+        desc = df_from_ch(ch, f"DESCRIBE TABLE {table}")
+        if "name" in desc.columns:
+            return desc["name"].to_list()
+    except Exception:
+        pass
+    return None
+
+
 def insert_df(ch: ChClient, table: str, df: pl.DataFrame) -> int:
     if df.is_empty():
         return 0
-    ch.insert_arrow(table, df.to_arrow())
-    return len(df)
+    try:
+        ch.insert_arrow(table, df.to_arrow())
+        return len(df)
+    except Exception as e:
+        msg = str(e)
+        if "NO_SUCH_COLUMN_IN_TABLE" not in msg:
+            raise
+        cols = _table_columns(ch, table)
+        if cols is None:
+            raise
+        keep = [c for c in df.columns if c in cols]
+        drop = sorted(set(df.columns) - set(keep))
+        if not keep:
+            raise RuntimeError(f"insert_df {table}: ninguna columna coincide con la tabla") from e
+        logger.warning(
+            "insert_df %s: columnas %s no existen en la tabla, se omiten",
+            table,
+            drop,
+        )
+        ch.insert_arrow(table, df.select(keep).to_arrow())
+        return len(df)
 
 
 def replace_all(ch: ChClient, table: str, df: pl.DataFrame) -> int:
