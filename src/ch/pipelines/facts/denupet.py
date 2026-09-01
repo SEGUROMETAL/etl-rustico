@@ -43,7 +43,7 @@ QUERY = """SELECT
         POPRO1 as CodProductor,
         POASEN as NroAsegurado
     FROM DenuPe
-    WHERE Year(FEDENU) = {{a}} AND Month(FEDENU) = {{m}}"""
+    WHERE Year(FEDENU) = {a} AND Month(FEDENU) = {m}"""
 
 
 @register("fact-denupet", "hechos", "Denuncias de siniestros (DenuPe), incremental mensual")
