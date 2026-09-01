@@ -163,5 +163,21 @@ def run(
             n = load_incremental(ch, "sinpagt", data, keys, "FechaPago")
             logger.info("sinpagt %s-%02d: %s filas nuevas", a, m, n)
 
-        control = df_from_ch(ch, CONTROL_QUERY)
-        logger.info("Control sinpagt vs sinpagt_agg:\n%s", control)
+        try:
+            control = df_from_ch(ch, CONTROL_QUERY)
+            logger.info("Control sinpagt vs sinpagt_agg:\n%s", control)
+        except Exception as e:
+            logger.warning(
+                "Control sinpagt_agg omitido (tabla no existe o sin datos): %s", e
+            )
+            try:
+                fallback = df_from_ch(
+                    ch,
+                    "SELECT max(toYYYYMM(FechaPago)) as max_sinpagt, "
+                    "min(toYYYYMM(FechaPago)) as min_sinpagt, "
+                    "count(DISTINCT toYYYYMM(FechaPago)) as distintos_sinpagt "
+                    "FROM sinpagt",
+                )
+                logger.info("Control sinpagt (solo base):\n%s", fallback)
+            except Exception as e2:
+                logger.warning("No se pudo obtener control de sinpagt: %s", e2)
